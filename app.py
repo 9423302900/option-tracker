@@ -5,29 +5,56 @@ import datetime
 import random
 
 st.set_page_config(layout="wide")
-st.title("📈 Option Buy Signal Tracker (Mock Data)")
+st.title("📈 Option Buy Signal Tracker – Select CE/PE near ₹100")
 
-# Mock symbols for testing
-symbols = ["NIFTY", "BANKNIFTY", "FINNIFTY", "RELIANCE", "HDFCBANK", "CRUDEOILM"]
+# Mock spot prices for underlying symbols
+spot_prices = {
+    "NIFTY": 23500,
+    "BANKNIFTY": 49500,
+    "FINNIFTY": 21500,
+    "RELIANCE": 2900,
+    "HDFCBANK": 1680,
+    "CRUDEOILM": 6600
+}
 
-# Simulate 9:30 AM base prices
+# Simulate full option chain near spot prices
 @st.cache_data(ttl=60*60)
-def get_base_prices():
-    base_data = []
-    for sym in symbols:
+def generate_option_chain():
+    option_data = []
+    for symbol, spot in spot_prices.items():
+        for offset in range(-5, 6):
+            strike = int(round(spot / 100.0)) * 100 + offset * 100
+            for option_type in ["CE", "PE"]:
+                ltp = round(random.uniform(60, 160), 2)
+                option_data.append({
+                    "Symbol": symbol,
+                    "OptionType": option_type,
+                    "StrikePrice": strike,
+                    "LTP": ltp
+                })
+    return pd.DataFrame(option_data)
+
+option_chain_df = generate_option_chain()
+
+# Filter to select CE/PE closest to ₹100 for each symbol
+def select_near_100_options(df):
+    selected = []
+    for symbol in df["Symbol"].unique():
         for opt_type in ["CE", "PE"]:
-            ltp = round(random.uniform(90, 110), 2)
-            base_data.append({
-                "Symbol": sym,
-                "OptionType": opt_type,
-                "StrikePrice": 100,
-                "BaseLTP_9_30": ltp
+            sub_df = df[(df["Symbol"] == symbol) & (df["OptionType"] == opt_type)]
+            sub_df["Diff"] = abs(sub_df["LTP"] - 100)
+            best = sub_df.sort_values("Diff").iloc[0]
+            selected.append({
+                "Symbol": best.Symbol,
+                "OptionType": best.OptionType,
+                "StrikePrice": best.StrikePrice,
+                "BaseLTP_9_30": best.LTP
             })
-    return pd.DataFrame(base_data)
+    return pd.DataFrame(selected)
 
-base_df = get_base_prices()
+base_df = select_near_100_options(option_chain_df)
 
-# Simulate live price check and 10% increase detection
+# Simulate live price and signal
 def simulate_current_prices(df):
     signals = []
     for _, row in df.iterrows():
@@ -51,3 +78,4 @@ buy_signals = signal_df[signal_df["Signal"] == "✅ BUY"]
 
 st.subheader("🔔 Buy Alerts")
 st.dataframe(buy_signals if not buy_signals.empty else pd.DataFrame([{"Status": "No signals yet"}]))
+
