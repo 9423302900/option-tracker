@@ -7,8 +7,15 @@ import random
 st.set_page_config(layout="wide")
 st.title("📈 Option Buy Signal Tracker (Mock Data)")
 
-# Mock symbols for testing
-symbols = ["NIFTY", "BANKNIFTY", "FINNIFTY", "RELIANCE", "HDFCBANK", "CRUDEOILM"]
+# Mock symbols and strike prices for testing
+symbols = [
+    {"name": "NIFTY", "strike": 100},
+    {"name": "BANKNIFTY", "strike": 100},
+    {"name": "FINNIFTY", "strike": 100},
+    {"name": "RELIANCE", "strike": 100},
+    {"name": "HDFCBANK", "strike": 100},
+    {"name": "CRUDEOILM", "strike": 100},
+]
 
 # Simulate 9:30 AM base prices
 @st.cache_data(ttl=60*60)
@@ -18,9 +25,9 @@ def get_base_prices():
         for opt_type in ["CE", "PE"]:
             ltp = round(random.uniform(90, 110), 2)
             base_data.append({
-                "Symbol": sym,
+                "Symbol": sym["name"],
                 "OptionType": opt_type,
-                "StrikePrice": 100,
+                "StrikePrice": sym["strike"],
                 "BaseLTP_9_30": ltp
             })
     return pd.DataFrame(base_data)
@@ -51,3 +58,4 @@ buy_signals = signal_df[signal_df["Signal"] == "✅ BUY"]
 
 st.subheader("🔔 Buy Alerts")
 st.dataframe(buy_signals if not buy_signals.empty else pd.DataFrame([{"Status": "No signals yet"}]))
+
